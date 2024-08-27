@@ -21,8 +21,8 @@ This application allows users to upload image, PDF, or EPUB files, extracts text
 ### Installation
 1. Clone the repository:
     ```
-    git clone <repositoryurl>
-    cd <repositorydirectory>
+    git clone https://github.com/Satyalohit25/VisDoc.git
+    cd VisDoc
     ```
     Install dependencies:
     Ensure you have Python 3.7+ installed. Create a virtual environment and install the required packages:
