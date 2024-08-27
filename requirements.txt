@@ -1,0 +1,6 @@
+gradio
+PyPDF2
+pytesseract
+ebooklib
+langchain_community
+Pillow
