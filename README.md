@@ -41,13 +41,15 @@ This application allows users to upload image, PDF, or EPUB files, extracts text
     Pillow
     ```
     Install Tesseract OCR:
-    Windows: Download the installer from the official Tesseract page and follow the installation instructions. Make sure to add Tesseract to your system PATH.
+   
+    Windows: Download the installer from the official Tesseract https://github.com/tesseract-ocr/tessdoc page and follow the installation instructions. Make sure to add Tesseract to your system PATH.
+   
     Linux: Install Tesseract using your package manager:
     ```
     sudo apt-get install tesseract-ocr
     ```
     Install Ollama and start the service:
-    Follow the instructions on the Ollama website to install and run the Ollama service.
+    Follow the instructions on the Ollama website https://ollama.com/ to install and run the Ollama service.
 
 ### Usage
 1. Start the application:
