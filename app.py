@@ -6,8 +6,7 @@ import gradio as gr
 import PyPDF2
 import pytesseract
 from ebooklib import epub
-from gradio_multimodalchatbot import MultimodalChatbot
-from gradio.data_classes import FileData
+from gradio_pdf import PDF
 from langchain_community.llms import Ollama
 from PIL import Image
 
@@ -29,6 +28,33 @@ except Exception as e:
 # Global variables
 extracted_information = ""
 logs = []
+
+# Define the system message to enforce content rules
+system_message = """
+You are OnlyFileReferGPT, and your primary role is to provide answers exclusively based on the information contained within the provided knowledge files. 
+
+### Key Instructions:
+1. Reference Restriction: You must only use the content from the provided documents to generate your responses. Do not incorporate any general knowledge, common facts, or information not explicitly mentioned in the documents.
+
+2. Information Confirmation: Before answering any question, you must first verify whether the information is present within the documents. If the required information is not found in the files, respond with: 
+   - "Information not found in the provided documents."
+
+3. Exactness in Responses: Ensure that your responses are as precise as possible, directly quoting or paraphrasing the relevant sections from the files when applicable. Do not infer, assume, or generalize beyond what is stated in the documents.
+
+4. Clarification and Transparency: If the document provides information that might be different or context-specific (e.g., boiling point of water in a specific location), include this context in your response to ensure accuracy.
+
+5. No Guessing: If a question cannot be answered based on the documents alone, do not guess or provide speculative answers. Instead, acknowledge the limitation by stating:
+   - "The answer is not available in the provided documents."
+
+### Examples of Appropriate Behavior:
+- User Question: "Who is the President of the United States?"
+  - Appropriate Response: "Information not found in the provided documents."
+  
+- User Question: "At what temperature does water boil according to the provided documents?"
+  - Appropriate Response: "According to the document, water boils at 96°C in [specific location]."
+
+By following these instructions, you will ensure that all outputs are strictly aligned with the information within the provided documents, avoiding any use of external or general knowledge.
+"""
 
 # Functions to extract text from files
 def extract_text_from_image(image_path):
@@ -109,13 +135,13 @@ def get_llama2_response(user_query):
 def upload_file_and_extract_text(file):
     file_path = file.name
     if file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
-        return extract_text_from_image(file_path), file_path, "image"  # Return image path for preview, specify 'image' type
+        return extract_text_from_image(file_path), file_path  # Return image path for preview
     elif file_path.lower().endswith('.pdf'):
-        return extract_text_from_pdf(file_path), file_path, "pdf"  # Return PDF path for preview, specify 'pdf' type
+        return extract_text_from_pdf(file_path), file_path  # Return PDF path for preview
     elif file_path.lower().endswith('.epub'):
-        return extract_text_from_epub(file_path), None, "epub"  # EPUB preview is not supported in Gradio directly
+        return extract_text_from_epub(file_path), None  # EPUB preview is not supported in Gradio directly
     else:
-        return "Unsupported file format. Please upload an image, PDF, or EPUB file.", None, "unsupported"
+        return "Unsupported file format. Please upload an image, PDF, or EPUB file.", None
 
 def answer_query(user_query):
     response = get_llama2_response(user_query)
@@ -148,50 +174,32 @@ with gr.Blocks(
         with gr.Column():
             gr.Markdown("<div class='section-title'>Upload File</div>")
             file_input = gr.File(label="Upload Image, PDF, or EPUB", type="filepath")
-            pdf_preview = gr.Image(label="PDF Preview", interactive=False, visible=False)  # PDF preview
-            image_preview = gr.Image(label="Image Preview", interactive=False, visible=False)  # Image preview
+            pdf_viewer = PDF(label="PDF Preview", interactive=True)  # PDF preview
         with gr.Column():
             gr.Markdown("<div class='section-title'>Extracted Text</div>")
             extracted_text_output = gr.Textbox(
                 label="Extracted Text", lines=10, interactive=False)
 
     # Connect file input to preview and text extraction
-    def update_preview(file):
-        extracted_text, preview_path, file_type = upload_file_and_extract_text(file)
-        if file_type == "pdf":
-            return extracted_text, gr.update(value=preview_path, visible=True), gr.update(visible=False)
-        elif file_type == "image":
-            return extracted_text, gr.update(visible=False), gr.update(value=preview_path, visible=True)
-        else:
-            return extracted_text, gr.update(visible=False), gr.update(visible=False)
-
     file_input.change(
-        fn=update_preview,
+        fn=upload_file_and_extract_text,
         inputs=file_input,
-        outputs=[extracted_text_output, pdf_preview, image_preview]
+        outputs=[extracted_text_output, pdf_viewer]
     )
 
     # Query processing
     gr.Markdown("<div class='section-title'>Query Processing</div>")
-    query_input = gr.Textbox(label="Enter Query")
-    query_button = gr.Button("Get Answer")
-    query_output = gr.Textbox(label="Model Response", interactive=False)
-
-    # Process query
+    query_input = gr.Textbox(label="Enter Query", lines=2)
+    query_button = gr.Button("Submit Query", elem_id="submit_query")
+    query_output = gr.Textbox(label="Query Answer", lines=10, interactive=False)
     query_button.click(
         fn=answer_query,
         inputs=query_input,
         outputs=query_output
     )
 
-    # Show logs
+    # Logs display
     gr.Markdown("<div class='section-title'>Logs</div>")
-    log_output = gr.Textbox(label="Logs", lines=10, interactive=False)
-    log_button = gr.Button("Show Logs")
-    log_button.click(
-        fn=get_logs,
-        outputs=log_output
-    )
+    logs_output = gr.Textbox(value=get_logs, label="Logs", lines=10, interactive=False, elem_id="logs_output")
 
-# Launch the Gradio app
-demo.launch(share=True)
+demo.launch()
